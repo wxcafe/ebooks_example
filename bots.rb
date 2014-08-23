@@ -5,15 +5,15 @@ include Ebooks
 
 CONSUMER_KEY = ""
 CONSUMER_SECRET = ""
-OATH_TOKEN = "" # oauth token for ebooks account
-OAUTH_TOKEN_SECRET = "" # oauth secret for ebooks account
+OAUTH_TOKEN = ""
+OAUTH_TOKEN_SECRET = ""
 
 ROBOT_ID = "ebooks" # Avoid infinite reply chains
-TWITTER_USERNAME = "ebooks_username" # Ebooks account username
+TWITTER_USERNAME = "username_ebooks" # Ebooks account username
 TEXT_MODEL_NAME = "username" # This should be the name of the text model
 
 DELAY = 2..30 # Simulated human reply delay range in seconds
-BLACKLIST = ['insomnius', 'upulie'] # Grumpy users to avoid interaction with
+BLACKLIST = ['horse_ebooks'] # Users to avoid interaction with
 SPECIAL_WORDS = ['ebooks', 'bot', 'bots', 'clone', 'singularity', 'world domination']
 
 # Track who we've randomly interacted with globally
@@ -48,6 +48,7 @@ class GenBot
     bot.on_mention do |tweet, meta|
       # Avoid infinite reply chains (very small chance of crosstalk)
       next if tweet[:user][:screen_name].include?(ROBOT_ID) && rand > 0.05
+      next if tweet[:user][:name].include?(ROBOT_ID) && rand > 0.05
 
       tokens = NLP.tokenize(tweet[:text])
 
@@ -71,14 +72,18 @@ class GenBot
       # tweet matches our keywords
       interesting = tokens.find { |t| @top100.include?(t.downcase) }
       very_interesting = tokens.find_all { |t| @top50.include?(t.downcase) }.length > 2
-      special = tokens.find { |t| SPECIAL_WORDS.include?(t) }
+      special = tokens.find { |t| SPECIAL_WORDS.include?(t.downcase) }
 
       if special
         favorite(tweet)
         favd = true # Mark this tweet as favorited
 
         bot.delay DELAY do
-          bot.follow tweet[:user][:screen_name]
+          begin
+            bot.follow tweet[:user][:screen_name]
+          rescue
+            @bot.log "Follow failed, ignoring..."
+          end
         end
       end
 
@@ -91,22 +96,37 @@ class GenBot
         favorite(tweet) if (rand < 0.5 && !favd) # Don't fav the tweet if we did earlier
         retweet(tweet) if rand < 0.1
         reply(tweet, meta) if rand < 0.1
+      elsif very_interesting && special # The tweet has already been faved earlier
+        retweet(tweet) if rand < 0.1
+        reply(tweet, meta) if rand < 0.1
       elsif interesting
         favorite(tweet) if rand < 0.1
         reply(tweet, meta) if rand < 0.05
       end
     end
 
-    # Schedule a main tweet for every day at midnight
-    bot.scheduler.cron '0 0 * * *' do
-      bot.tweet @model.make_statement
+    # Schedule a main tweet every 2 hours
+    bot.scheduler.every '2h' do
+      begin
+        bot.tweet @model.make_statement
+      rescue
+        @bot.log "Tweet failed, ignoring..."
+      end 
+    end
+    # Empty the list of people the bot has talked to today
+    bot.scheduler.every '24h' do
       $have_talked = {}
     end
   end
 
   def reply(tweet, meta)
-    resp = @model.make_response(meta[:mentionless], meta[:limit])
+    resp = meta[:reply_prefix] + @model.make_response(meta[:mentionless], 140 - meta[:reply_prefix].length)
     @bot.delay DELAY do
+      begin
+        @bot.reply tweet, resp
+      rescue
+        @bot.log "Reply failed, ignoring..."
+      end
       @bot.reply tweet, meta[:reply_prefix] + resp
     end
   end
@@ -114,14 +134,22 @@ class GenBot
   def favorite(tweet)
     @bot.log "Favoriting @#{tweet[:user][:screen_name]}: #{tweet[:text]}"
     @bot.delay DELAY do
-      @bot.twitter.favorite(tweet[:id])
+      begin
+        @bot.twitter.favorite(tweet[:id])
+      rescue
+        @bot.log "Favorite failed, ignoring..."
+      end
     end
   end
 
   def retweet(tweet)
     @bot.log "Retweeting @#{tweet[:user][:screen_name]}: #{tweet[:text]}"
     @bot.delay DELAY do
-      @bot.twitter.retweet(tweet[:id])
+      begin
+        @bot.twitter.retweet(tweet[:id])
+      rescue
+        @bot.log "Retweet failed, ignoring..."
+      end
     end
   end
 end
@@ -131,7 +159,7 @@ def make_bot(bot, modelname)
 end
 
 Ebooks::Bot.new(TWITTER_USERNAME) do |bot|
-  bot.oauth_token = OATH_TOKEN
+  bot.oauth_token = OAUTH_TOKEN
   bot.oauth_token_secret = OAUTH_TOKEN_SECRET
 
   make_bot(bot, TEXT_MODEL_NAME)
