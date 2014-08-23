@@ -59,7 +59,9 @@ class GenBot
         favorite(tweet)
       end
 
-      reply(tweet, meta)
+      bot.delay DELAY do
+        reply(tweet, meta)
+      end
     end
 
     bot.on_timeline do |tweet, meta|
