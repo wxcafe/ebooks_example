@@ -8,11 +8,11 @@ CONSUMER_SECRET = ""
 OAUTH_TOKEN = ""
 OAUTH_TOKEN_SECRET = ""
 
-ROBOT_ID = "ebooks" # Avoid infinite reply chains
-TWITTER_USERNAME = "username_ebooks" # Ebooks account username
-TEXT_MODEL_NAME = "username" # This should be the name of the text model
+ROBOT_ID = 'ebooks' # Avoid infinite reply chains
+TWITTER_USERNAME = "example_ebooks" # Ebooks account username
+TEXT_MODEL_NAME = "example" # This should be the name of the text model
 
-DELAY = 2..30 # Simulated human reply delay range in seconds
+DELAY = 2..10 # Simulated human reply delay range in seconds
 BLACKLIST = ['horse_ebooks'] # Users to avoid interaction with
 SPECIAL_WORDS = ['ebooks', 'bot', 'bots', 'clone', 'singularity', 'world domination']
 
@@ -47,8 +47,8 @@ class GenBot
 
     bot.on_mention do |tweet, meta|
       # Avoid infinite reply chains (very small chance of crosstalk)
-      next if tweet[:user][:screen_name].include?(ROBOT_ID) && rand > 0.05
-      next if tweet[:user][:name].include?(ROBOT_ID) && rand > 0.05
+        next if tweet[:user][:screen_name].include?(ROBOT_ID) && rand > 0.05
+		next if tweet[:user][:name].include?(ROBOT_ID) && rand > 0.05
 
       tokens = NLP.tokenize(tweet[:text])
 
@@ -59,14 +59,13 @@ class GenBot
         favorite(tweet)
       end
 
-      bot.delay DELAY do
-        reply(tweet, meta)
-      end
+      reply(tweet, meta)
     end
 
     bot.on_timeline do |tweet, meta|
       next if tweet[:retweeted_status] || tweet[:text].start_with?('RT')
-      next if BLACKLIST.include?(tweet[:user][:screen_name])
+      next if BLACKLIST.include?(tweet[:user][:screen_name]) ||
+        BLACKLIST.include?(tweet[:user][:name])
 
       tokens = NLP.tokenize(tweet[:text])
 
@@ -94,13 +93,13 @@ class GenBot
       next if $have_talked[tweet[:user][:screen_name]]
       $have_talked[tweet[:user][:screen_name]] = true
 
-      if very_interesting || special
+      if very_interesting || special 
         favorite(tweet) if (rand < 0.5 && !favd) # Don't fav the tweet if we did earlier
         retweet(tweet) if rand < 0.1
         reply(tweet, meta) if rand < 0.1
       elsif very_interesting && special # The tweet has already been faved earlier
-        retweet(tweet) if rand < 0.1
-        reply(tweet, meta) if rand < 0.1
+        retweet(tweet) if rand < 0.3
+        reply(tweet, meta) if rand < 0.3
       elsif interesting
         favorite(tweet) if rand < 0.1
         reply(tweet, meta) if rand < 0.05
@@ -122,6 +121,7 @@ class GenBot
   end
 
   def reply(tweet, meta)
+    #@bot.log "Replying to @#{tweet[:user][:screen_name]}: #{tweet[:text]}"
     resp = meta[:reply_prefix] + @model.make_response(meta[:mentionless], 140 - meta[:reply_prefix].length)
     @bot.delay DELAY do
       begin
@@ -129,7 +129,6 @@ class GenBot
       rescue
         @bot.log "Reply failed, ignoring..."
       end
-      @bot.reply tweet, meta[:reply_prefix] + resp
     end
   end
 
