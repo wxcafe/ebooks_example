@@ -15,8 +15,11 @@ ebooks consume corpus/username.json
 Populate bots.rb with your auth details, the bot username and model name, then:
 
 ```bash
+cd base
+docker build --rm -t ebooks_base .
+cd ..
 ./replace.sh
-docker build --rm -t ebooks .
+docker build --rm -t whatever_ebooks .
 docker run -d ebooks
 ```
 
