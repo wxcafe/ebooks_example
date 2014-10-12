@@ -14,5 +14,6 @@ COPY corpus  /ebooks/corpus/
 COPY model   /ebooks/model/
 
 WORKDIR /ebooks
+VOLUME /var/log/
 
 CMD ["./run.sh"]
