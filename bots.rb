@@ -14,7 +14,7 @@ TEXT_MODEL_NAME = "example" # This should be the name of the text model
 
 DELAY = 2..10 # Simulated human reply delay range in seconds
 BLACKLIST = ['horse_ebooks'] # Users to avoid interaction with
-SPECIAL_WORDS = ['ebooks', 'bot', 'bots', 'clone', 'singularity', 'world domination']
+SPECIAL_WORDS = ['ebooks', 'clone', 'singularity', 'world domination']
 
 # Track who we've randomly interacted with globally
 $have_talked = {}
