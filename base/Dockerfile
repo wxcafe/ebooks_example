@@ -11,10 +11,7 @@ RUN apt-get update
 RUN apt-get install -y ruby ruby-dev build-essential libssl-dev
 RUN mkdir /ebooks
 RUN gem install simple_oauth -v 0.2.0
-RUN gem install twitter_ebooks
-
-RUN apt-get remove -y build-essential
-RUN apt-get -y dist-upgrade
+RUN gem install twitter_ebooks -v 2.2.9
 
 WORKDIR /ebooks
 
