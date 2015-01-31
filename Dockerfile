@@ -5,14 +5,11 @@
 FROM ebooks_base
 
 MAINTAINER wxcafé "wxcafe@wxcafe.net"
-ENV DEBIAN_FRONTEND noninteractive
 
 COPY bots.rb /ebooks/
-COPY run.sh  /ebooks/
-COPY run.rb  /ebooks/
+COPY run.sh /ebooks/
 COPY corpus  /ebooks/corpus/
 COPY model   /ebooks/model/
-RUN mkdir /var/log/ebooks/
 
 WORKDIR /ebooks
 VOLUME /var/log/
